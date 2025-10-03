@@ -163,7 +163,7 @@ mcp-bridge -server "http://localhost:3000" -key "dev-key" -debug
 
 ### Debug Logging
 
-MCP Bridge provides granular debug logging to help troubleshoot communication issues:
+MCP Bridge provides granular debug logging to help troubleshoot communication issues and observe MCP traffic in real time. This makes it a powerful companion even when your IDE can already speak to HTTP/SSE MCP servers directly.
 
 ```bash
 # Full debug logging (both client and server)
@@ -191,6 +191,36 @@ Example debug output:
   "version": "1.0.0"
 }
 ← Forwarding to client
+```
+
+#### Why use mcp-bridge even when you “don’t really need” a bridge?
+
+Even if your IDE or tool can talk to your remote MCP server directly, running traffic through mcp-bridge gives you:
+
+- Observable, directional logs
+  - See each request and response with clear direction markers: → client-to-server, ← server-to-client
+  - Turn on only the side you care about using -debug-client or -debug-server
+- Faster troubleshooting and support
+  - Capture minimal, anonymized traces to reproduce issues without exposing full payloads
+  - Spot protocol mismatches and malformed messages early
+- Non-invasive monitoring in dev/staging
+  - Drop-in in front of any existing MCP client without changing client code
+  - Keep your existing workflow while gaining visibility
+- Teaching and demos
+  - Show newcomers what “MCP over stdio/http” actually looks like
+  - Great for workshops, screen shares, and bug bashes
+
+At-a-glance examples:
+
+```bash
+# Watch just the client side (requests going out)
+mcp-bridge -server "https://example.com/mcp" -key "$API_KEY" -debug-client
+
+# Watch just the server side (responses and notifications coming back)
+mcp-bridge -server "https://example.com/mcp" -key "$API_KEY" -debug-server
+
+# Full-duplex tracing for a short session to capture an issue
+mcp-bridge -server "https://example.com/mcp" -key "$API_KEY" -debug | tee trace.log
 ```
 
 ## How It Works
