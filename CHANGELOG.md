@@ -7,12 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- Install script now properly detects and uses directories from user's PATH
-- Install script is OS-aware (macOS vs Linux) with platform-specific directory preferences
-- Install script correctly handles missing installation directories by creating them
-- Fixed extracted binary filename detection in install script
-
 ## [0.1.0] - 2025-10-03
 
 ### Added
@@ -29,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive documentation in README.md
 - Pre-commit hooks for code quality
 - GitHub Actions CI workflow
+
+### Fixed
+- Install script now properly detects and uses directories from user's PATH
+- Install script is OS-aware (macOS vs Linux) with platform-specific directory preferences
+- Install script correctly handles missing installation directories by creating them
+- Fixed extracted binary filename detection in install script
 
 ### Changed
 - Updated transport documentation to accurately reflect MCP protocol implementation
