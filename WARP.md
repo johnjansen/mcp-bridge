@@ -54,9 +54,9 @@ Common commands
       ```bash path=null start=null
       go test ./...
       ```
-    - Run a single feature by name (regex matches scenario/test name):
+- Run a single feature by name (regex matches scenario/test name):
       ```bash path=null start=null
-      go test -run 'mcp-bridge-bdd' ./bdd -v
+      go test -run 'mcp-bridge-bdd' -v
       ```
 
 - Format and vet
