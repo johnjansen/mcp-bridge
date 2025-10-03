@@ -9,21 +9,20 @@ import (
 )
 
 var (
-	serverURL = flag.String("server", "", "MCP server URL (required)")
+	serverURL = flag.String("server", "", "Remote MCP server URL (required)")
 	apiKey    = flag.String("key", "", "API key for authentication (required)")
-	channel   = flag.String("channel", "", "Channel name (required)")
 	debug     = flag.Bool("debug", false, "Enable debug logging")
 )
 
 func main() {
 	flag.Parse()
 
-	if *serverURL == "" || *apiKey == "" || *channel == "" {
+	if *serverURL == "" || *apiKey == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	b := bridge.New(*serverURL, *apiKey, *channel, *debug)
+	b := bridge.New(*serverURL, *apiKey, *debug)
 	if err := b.Run(); err != nil {
 		log.Fatalf("Error: %v", err)
 	}

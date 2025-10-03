@@ -5,23 +5,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/johnjansen/mcp-bridge)](https://golang.org/)
 
-> **🚀 Stream Any Data to Your MCP Server in Real-Time**
+> **🌉 Bridge stdio to Remote MCP Servers**
 >
-> Turn any command-line tool into an MCP data source. Pipe logs, metrics, sensor data, or API responses directly to your Model Context Protocol server with built-in authentication and channel organization. Perfect for feeding AI agents with live data streams, building monitoring pipelines, or creating custom data integrations.
+> Connect your local MCP clients to remote MCP servers over HTTP. MCP Bridge acts as a local MCP server on stdio while proxying all communication to a remote HTTP-based MCP server, enabling transparent access to remote MCP capabilities.
 >
-> **Why MCP Bridge?**
-> - **Zero Configuration**: Just pipe data and go
-> - **Secure by Design**: Bearer token authentication built-in
-> - **Channel Organization**: Route different data types to specific channels
-> - **Bulletproof Streaming**: Handles backpressure and connection issues gracefully
-> - **Universal Input**: Works with any tool that writes to stdout
+> **Architecture**: `stdio ↔ [stdio ↔ http] ↔ http`
 
 ## Installation
 
-Download the latest release or build from source:
+Build from source:
 
 ```bash
-# Build from source
 git clone https://github.com/johnjansen/mcp-bridge.git
 cd mcp-bridge
 go build -o bin/mcp-bridge .
@@ -29,86 +23,63 @@ go build -o bin/mcp-bridge .
 
 ## Quick Start
 
-Stream data to your MCP server in three simple steps:
+Connect to a remote MCP server in three simple steps:
 
 ```bash
 # 1. Set your API key (never hardcode secrets)
 export MCP_API_KEY="your-secret-api-key"
 
-# 2. Pipe any data to the bridge
-echo "Hello, MCP!" | ./bin/mcp-bridge \
-  -server "https://your-mcp-server.com" \
+# 2. Start the bridge
+./bin/mcp-bridge \
+  -server "https://your-remote-mcp-server.com" \
   -key "$MCP_API_KEY" \
-  -channel "alerts"
+  -debug
 
-# 3. Your data is now streaming to your MCP server
+# 3. Your local MCP client can now communicate via stdio
 ```
 
-## Real-World Examples
+## Use Cases
 
-### Stream Application Logs
+### Connect Local AI Tools to Remote MCP Servers
 ```bash
-tail -f /var/log/app.log | ./bin/mcp-bridge \
-  -server "https://mcp.example.com" \
-  -key "$MCP_API_KEY" \
-  -channel "app-logs"
+# Bridge enables local tools to access remote MCP capabilities
+my-local-mcp-client | ./bin/mcp-bridge -server "https://remote-mcp.com" -key "$API_KEY"
 ```
 
-### Monitor System Metrics
-```bash
-vmstat 1 | ./bin/mcp-bridge \
-  -server "https://mcp.example.com" \
-  -key "$MCP_API_KEY" \
-  -channel "system-metrics"
-```
+### Access Remote Tools and Resources
+The bridge transparently proxies:
+- **MCP initialize handshake** - Establishes connection
+- **Tool listing and execution** - Access remote tools
+- **Resource access** - Read remote resources  
+- **Bidirectional communication** - Server notifications and client requests
 
-### Stream API Data
+### Development and Testing
 ```bash
-curl -N "https://api.example.com/events" | ./bin/mcp-bridge \
-  -server "https://mcp.example.com" \
-  -key "$MCP_API_KEY" \
-  -channel "api-events"
-```
-
-### Database Change Stream
-```bash
-pg_receivexlog --slot=changes --stdout | ./bin/mcp-bridge \
-  -server "https://mcp.example.com" \
-  -key "$MCP_API_KEY" \
-  -channel "db-changes"
+# Connect to local development MCP server
+./bin/mcp-bridge -server "http://localhost:3000" -key "dev-key" -debug
 ```
 
 ## Command Line Options
 
 | Flag | Description | Required |
 |------|-------------|----------|
-| `-server` | MCP server URL (e.g., `https://mcp.example.com`) | Yes |
+| `-server` | Remote MCP server URL (HTTP/HTTPS) | Yes |
 | `-key` | API key for authentication | Yes |
-| `-channel` | Channel name for organizing data streams | Yes |
 | `-debug` | Enable debug logging | No |
 
 ## How It Works
 
-MCP Bridge reads data from stdin in 4KB chunks and posts each chunk to your MCP server via HTTP:
+MCP Bridge creates a bidirectional proxy between stdio and HTTP:
 
 ```
-stdin → [4KB buffer] → POST /api/v1/stream/{channel}
+Local MCP Client ←→ stdio ←→ [MCP Bridge] ←→ HTTP ←→ Remote MCP Server
 ```
 
-**HTTP Details:**
-- **Method**: POST
-- **URL**: `{server}/api/v1/stream/{channel}`
-- **Headers**: 
-  - `Authorization: Bearer {key}`
-  - `Content-Type: application/octet-stream`
-- **Body**: Raw binary data from stdin
-
-## Security
-
-- **Never hardcode API keys** in commands or scripts
-- Always use environment variables: `export MCP_API_KEY="your-key"`
-- Use HTTPS URLs for your MCP server
-- Rotate API keys regularly
+**Protocol Details:**
+- **Input**: JSON-RPC MCP protocol via stdin/stdout
+- **Output**: HTTP requests to remote MCP server (SSE transport)
+- **Authentication**: Bearer token authentication
+- **Bidirectional**: Handles both client requests and server notifications
 
 ## Development
 
@@ -116,45 +87,62 @@ This project uses BDD testing with Gherkin scenarios:
 
 ```bash
 # Install dependencies
-go get github.com/cucumber/godog@latest
 go mod tidy
 
 # Run all tests
 go test ./...
 
 # Run BDD tests with verbose output
-go test -run 'mcp-bridge-bdd' ./bdd -v
+go test ./bdd -v
 
 # Build the binary
-mkdir -p ./bin && go build -o ./bin/mcp-bridge .
+go build -o bin/mcp-bridge .
 
 # Format and vet
 go fmt ./...
 go vet ./...
 ```
 
+### Pre-commit Hooks
+
+This project includes pre-commit hooks that automatically run:
+- **gitleaks** - Secret scanning
+- **go vet** - Static analysis
+- **go fmt** - Code formatting check
+- **BDD tests** - All scenarios must pass
+- **Build verification** - Ensures code compiles
+
+```bash
+# Install pre-commit hooks
+./scripts/install-hooks.sh
+
+# Test hooks manually
+.git/hooks/pre-commit
+```
+
+**Note**: Install gitleaks first: `brew install gitleaks`
+
 ### Project Structure
 
 ```
 ├── main.go                 # CLI entry point
 ├── internal/bridge/        # Core bridge logic
-│   ├── bridge.go          # MCPBridge struct and HTTP client
-│   └── runner.go          # Streaming loop
+│   └── bridge.go          # MCP transport bridge
 ├── bdd/                   # BDD tests
 │   ├── steps_test.go      # Godog step definitions
 │   └── suite_test.go      # Test suite runner
 ├── features/              # Gherkin scenarios
-│   └── streaming.feature  # Core streaming behavior
+│   └── streaming.feature  # MCP transport bridge behavior
 └── WARP.md               # Development guidelines
 ```
 
 ## Architecture
 
-- **Minimal Design**: Single-purpose tool that does one thing well
-- **Streaming First**: Handles continuous data streams efficiently
-- **Error Resilient**: Goroutines with proper error propagation
-- **Memory Efficient**: 4KB buffer with bounded memory usage
-- **Debug Support**: Optional verbose logging for troubleshooting
+- **Transport Bridge**: Bridges stdio MCP to HTTP MCP protocols
+- **Bidirectional**: Handles both client-to-server and server-to-client communication
+- **Authentication**: Secure API key authentication with remote servers
+- **Error Resilient**: Proper error handling and connection management
+- **Standards Compliant**: Uses official MCP Go SDK
 
 ## Contributing
 
@@ -171,4 +159,4 @@ MIT License - see LICENSE file for details.
 
 ## Why "Bridge"?
 
-This tool bridges the gap between any command-line data source and MCP servers. It's the missing piece that lets you stream real-time data to AI agents and other MCP consumers without complex integrations.
+This tool bridges the gap between local stdio-based MCP clients and remote HTTP-based MCP servers. It enables transparent communication across different MCP transport protocols, making remote MCP capabilities accessible to local tools.

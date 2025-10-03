@@ -3,18 +3,18 @@
 This file provides guidance to WARP (warp.dev) when working with code in this repository.
 
 - Repository: mcp-bridge (Go)
-- Purpose: Stream stdin data to a remote MCP server over HTTP with bearer auth, organized by channel.
+- Purpose: Bridge stdio MCP communication to remote HTTP MCP servers, enabling transparent access to remote MCP capabilities.
 
 Project summary
 - Minimal Go CLI consisting of a single entrypoint (main.go) and a Go module (go.mod).
-- Core behavior: reads from stdin in chunks and POSTs each chunk to {SERVER}/api/v1/stream/{CHANNEL} with Authorization: Bearer {API_KEY}.
+- Core behavior: acts as a local MCP server on stdio while proxying all communication to a remote HTTP-based MCP server using the official MCP Go SDK.
 
 Prerequisites
 - Go: >= 1.24.6 (from go.mod). Use your local Go toolchain (asdf/brew acceptable).
 - Optional tooling: gitleaks (run before committing per house rules).
 
 Quick start
-- Build the binary, then pipe data to it with required flags.
+- Build the binary, then start it with required flags to bridge stdio MCP to remote HTTP MCP.
 
 Common commands
 - Setup
@@ -34,18 +34,17 @@ Common commands
     ```
 
 - Run
-  - Use environment variables for secrets, then pass flags. The program reads from stdin.
+  - Use environment variables for secrets, then pass flags. The program bridges stdio to HTTP MCP.
     ```bash path=null start=null
     export MCP_API_KEY={{MCP_API_KEY}}
-    echo "hello world" | ./bin/mcp-bridge \
-      -server "https://example.com" \
+    ./bin/mcp-bridge \
+      -server "https://remote-mcp-server.com" \
       -key "$MCP_API_KEY" \
-      -channel "my-channel" \
       -debug
     ```
 
 - Tests
-  - This repository currently contains no unit tests. A BDD scaffold using godog is provided under bdd/ and features/.
+  - This repository uses BDD testing with godog. BDD tests are provided under bdd/ and features/.
     - Install BDD dependency and tidy:
       ```bash path=null start=null
       go get github.com/cucumber/godog@latest && go mod tidy
@@ -80,14 +79,14 @@ Common commands
     ```
 
 High-level architecture
-- Entry point: main.go defines flags (-server, -key, -channel, -debug) and creates a bridge instance.
-- Core logic: internal/bridge package contains MCPBridge struct and streaming logic.
-- MCPBridge struct holds ServerURL, APIKey, Channel, an http.Client, and Debug flag.
+- Entry point: main.go defines flags (-server, -key, -debug) and creates a bridge instance.
+- Core logic: internal/bridge package contains MCPBridge struct and MCP transport bridging logic.
+- MCPBridge struct holds RemoteURL, APIKey, MCP server, MCP client, and Debug flag.
 - Run loop (in internal/bridge):
-  - Reads from stdin via bufio.Reader into a 4KB buffer in a goroutine.
-  - For each non-empty read, posts bytes to {serverURL}/api/v1/stream/{channel}.
-  - Uses Authorization: Bearer {apiKey}, Content-Type: application/octet-stream.
-  - sync.WaitGroup and an error channel coordinate completion and propagate the first error.
+  - Creates an MCP server that accepts stdio connections (left side of bridge).
+  - Creates an MCP client that connects to remote HTTP server via SSE transport (right side).
+  - Proxies all MCP protocol communication bidirectionally between stdio and HTTP.
+  - Uses the official MCP Go SDK for protocol handling.
 - Logging is gated behind -debug to avoid noisy output.
 
 Files of interest
@@ -105,3 +104,10 @@ House rules observed here
 - Keep solutions simple and clean; underengineer until needed.
 - Always run gitleaks before committing.
 - If you introduce Rails or a Rails service in this repo in the future, use Rails generators to bootstrap new functionality.
+
+Pre-commit hooks
+- Pre-commit hooks are set up to enforce quality standards:
+  - Install with: ./scripts/install-hooks.sh
+  - Runs gitleaks, go vet, go fmt, BDD tests, and build verification
+  - Prevents commits that fail any checks
+- All contributors should install the hooks after cloning
