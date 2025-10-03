@@ -99,9 +99,17 @@ func TestStdioTransport(t *testing.T) {
 	})
 
 	t.Run("invalid command", func(t *testing.T) {
-		_, err := NewStdioTransport("nonexistent", nil, false)
+		// NewStdioTransport only creates pipes, doesn't start the command
+		// The error will occur when Connect() is called
+		transport, err := NewStdioTransport("nonexistent", nil, false)
+		if err != nil {
+			t.Skipf("Command setup failed: %v", err)
+		}
+
+		ctx := context.Background()
+		err = transport.Connect(ctx)
 		if err == nil {
-			t.Error("Expected error for nonexistent command")
+			t.Error("Expected error when connecting to nonexistent command")
 		}
 	})
 
