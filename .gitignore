@@ -38,3 +38,4 @@ coverage.*
 # Env files (do not commit secrets)
 .env
 .env.*
+dist/
