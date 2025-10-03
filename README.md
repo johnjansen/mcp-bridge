@@ -1,5 +1,10 @@
 # MCP Bridge
 
+[![CI](https://github.com/johnjansen/mcp-bridge/workflows/CI/badge.svg)](https://github.com/johnjansen/mcp-bridge/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/johnjansen/mcp-bridge)](https://goreportcard.com/report/github.com/johnjansen/mcp-bridge)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/johnjansen/mcp-bridge)](https://golang.org/)
+
 > **🚀 Stream Any Data to Your MCP Server in Real-Time**
 >
 > Turn any command-line tool into an MCP data source. Pipe logs, metrics, sensor data, or API responses directly to your Model Context Protocol server with built-in authentication and channel organization. Perfect for feeding AI agents with live data streams, building monitoring pipelines, or creating custom data integrations.
