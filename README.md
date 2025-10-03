@@ -237,11 +237,88 @@ MCP Bridge creates a bidirectional proxy between stdio and HTTP:
 Local MCP Client ←→ stdio ←→ [MCP Bridge] ←→ HTTP ←→ Remote MCP Server
 ```
 
+### Transport Mechanisms
+
+MCP Bridge supports two transport mechanisms for communicating with remote servers, automatically selecting the best available option:
+
+1. **MCP Streaming Transport** (Primary)
+   - Native MCP streaming protocol over HTTP
+   - Connects to `/stream` endpoint for efficient message exchange
+   - Uses the official MCP Go SDK's StreamableClientTransport
+   - Ideal for real-time tool execution and notifications
+   - Maintains continuous connection with the server
+
+2. **HTTP POST Transport** (Fallback)
+   - Traditional request-response communication
+   - Each MCP message sent as separate HTTP POST request
+   - Compatible with servers that don't support streaming
+   - Implements JSON-RPC over HTTP protocol
+   - Mimics Ruby bridge behavior for maximum compatibility
+
+**Transport Selection Process:**
+1. Bridge attempts streaming connection to `/stream` endpoint
+2. Uses 3-second timeout to test streaming capability
+3. If streaming succeeds, establishes SSE transport
+4. If streaming fails or times out, falls back to HTTP POST
+5. Logs transport selection when debug enabled
+
+Example debug output during transport negotiation:
+```
+2025/10/03 17:40:43 Attempting streaming transport...
+2025/10/03 17:40:43 Using streaming transport
+```
+or with fallback:
+```
+2025/10/03 17:40:43 Attempting streaming transport...
+2025/10/03 17:40:46 Streaming not supported (connection refused), falling back to HTTP POST
+```
+
 **Protocol Details:**
 - **Input**: JSON-RPC MCP protocol via stdin/stdout
-- **Output**: HTTP requests to remote MCP server (SSE transport)
+- **Output**: HTTP requests to remote MCP server (streaming or POST)
 - **Authentication**: Bearer token authentication
 - **Bidirectional**: Handles both client requests and server notifications
+- **Content Type**: application/json with chunked transfer encoding
+
+### Transport Configuration Examples
+
+**1. Server with Both Transports:**
+No special configuration needed - bridge auto-negotiates:
+```bash
+mcp-bridge -server "https://mcp.example.com" -key "$API_KEY" -debug
+```
+
+**2. Streaming-Only Server:**
+Ensure `/stream` endpoint is available:
+```bash
+mcp-bridge -server "https://streaming.example.com" -key "$API_KEY" -debug
+# Bridge will use SSE transport exclusively
+```
+
+**3. Legacy Server (HTTP POST only):**
+Bridge automatically falls back to HTTP POST:
+```bash
+mcp-bridge -server "https://legacy.example.com" -key "$API_KEY" -debug
+# After 3s timeout, falls back to HTTP POST transport
+```
+
+**Debug Output Examples:**
+
+1. Successful Streaming Connection:
+```
+2025/10/03 17:40:43 Starting MCP bridge to https://example.com/mcp (debug: global=true)
+2025/10/03 17:40:43 Attempting streaming transport...
+2025/10/03 17:40:43 Using streaming transport
+2025/10/03 17:40:43 Connected to remote MCP server
+```
+
+2. Fallback to HTTP POST:
+```
+2025/10/03 17:40:43 Starting MCP bridge to https://legacy.example.com/mcp (debug: global=true)
+2025/10/03 17:40:43 Attempting streaming transport...
+2025/10/03 17:40:46 Streaming not supported (connection refused), falling back to HTTP POST
+2025/10/03 17:40:46 HTTP POST bridge running, reading from stdin...
+```
 
 ## Development
 

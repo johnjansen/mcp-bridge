@@ -119,6 +119,36 @@ else
     exit 1
 fi
 
+# 6. Changelog validation
+print_step "Validating CHANGELOG.md..."
+
+# Check if CHANGELOG.md exists
+if [ ! -f "CHANGELOG.md" ]; then
+    print_error "CHANGELOG.md not found. Please create it following Keep a Changelog format."
+    exit 1
+fi
+
+# Check for [Unreleased] section
+if ! grep -q "\[Unreleased\]" "CHANGELOG.md"; then
+    print_error "CHANGELOG.md must have an [Unreleased] section at the top."
+    exit 1
+fi
+
+# If there are changes to be committed, check if CHANGELOG.md was modified
+GIT_DIFF=$(git diff --cached --name-only)
+if [ -n "$GIT_DIFF" ] && ! echo "$GIT_DIFF" | grep -q "^CHANGELOG\.md$"; then
+    echo -e "${YELLOW}⚠️  Warning: No changes detected in CHANGELOG.md${NC}"
+    echo -e "${YELLOW}   If your changes affect functionality, please update CHANGELOG.md${NC}"
+    echo -e "${YELLOW}   See WARP.md for changelog format guidelines${NC}"
+    read -p "Continue anyway? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
+
+print_success "Changelog validation passed"
+
 echo -e "${GREEN}🎉 All pre-commit checks passed!${NC}"
 EOF
 
@@ -132,6 +162,7 @@ echo "  • Code quality (go vet)"
 echo "  • Code formatting (go fmt)"
 echo "  • BDD tests"
 echo "  • Build verification"
+echo "  • Changelog validation"
 echo ""
 echo "To test the hook manually, run:"
 echo "  .git/hooks/pre-commit"

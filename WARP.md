@@ -104,6 +104,14 @@ House rules observed here
 - Keep solutions simple and clean; underengineer until needed.
 - Always run gitleaks before committing.
 - If you introduce Rails or a Rails service in this repo in the future, use Rails generators to bootstrap new functionality.
+- Maintain CHANGELOG.md according to Keep a Changelog format:
+  - Follow the Keep a Changelog format (https://keepachangelog.com)
+  - Keep an [Unreleased] section at the top for tracking ongoing changes
+  - Use semantic versioning (MAJOR.MINOR.PATCH)
+  - Required sections: Added, Changed, Deprecated, Removed, Fixed, Security
+  - Each PR that affects functionality must update CHANGELOG.md
+  - Write clear, user-focused change descriptions
+  - Date format: YYYY-MM-DD for all releases
 
 Pre-commit hooks
 - Pre-commit hooks are set up to enforce quality standards:
