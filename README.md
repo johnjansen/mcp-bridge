@@ -122,19 +122,25 @@ MCP Bridge can be configured in various IDEs to enable local AI capabilities:
 ```
 
 ### Cursor/VSCode
-Cursor and VSCode support HTTP streaming for MCP directly, so you typically don't need mcp-bridge. Configure them directly:
+While Cursor and VSCode support HTTP streaming for MCP directly, you can still use mcp-bridge to intercept and debug traffic:
 ```json
 {
   "mcpServers": {
-    "your-mcp-server": {
-      "url": "https://your-remote-mcp-server.com/mcp",
-      "headers": {
-        "Authorization": "Bearer your-secret-api-key"
+    "your-mcp-server-debug": {
+      "command": "mcp-bridge",
+      "args": [
+        "-server", "https://your-remote-mcp-server.com",
+        "-key", "$MCP_API_KEY",
+        "-debug"
+      ],
+      "env": {
+        "MCP_API_KEY": "your-secret-api-key"
       }
     }
   }
 }
 ```
+This configuration lets you observe all MCP traffic in real-time, perfect for debugging and understanding protocol interactions.
 
 ## Use Cases
 
