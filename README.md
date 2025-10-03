@@ -5,11 +5,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/johnjansen/mcp-bridge)](https://golang.org/)
 
-> **🌉 Bridge stdio to Remote MCP Servers**
+> **🌉 Bridge stdio to Remote MCP Servers with Built-in Observability**
 >
-> Connect your local MCP clients to remote MCP servers over HTTP. MCP Bridge acts as a local MCP server on stdio while proxying all communication to a remote HTTP-based MCP server, enabling transparent access to remote MCP capabilities.
+> A drop-in bridge with bidirectional logging that lets you:
+> - **Watch MCP Traffic** → See requests and responses with directional indicators (→/←)
+> - **Debug Selectively** → Monitor just client or server side with granular controls
+> - **Troubleshoot Fast** → Capture minimal traces without changing client code
+> - **Learn & Demo** → Perfect for workshops, demos, and teaching MCP flows
 >
-> **Architecture**: `stdio ↔ [stdio ↔ http] ↔ http`
+> Plus traditional bridging: `stdio ↔ [stdio ↔ http] ↔ http`
+>
+> Even if your tools support HTTP/SSE directly, mcp-bridge adds observability without changing your workflow.
 
 ## Installation
 
