@@ -54,9 +54,9 @@ Common commands
       ```bash path=null start=null
       go test ./...
       ```
-- Run a single feature by name (regex matches scenario/test name):
+    - Run a single feature by name (regex matches scenario/test name):
       ```bash path=null start=null
-      go test -run 'mcp-bridge-bdd' -v
+      go test -run 'mcp-bridge-bdd' ./bdd -v
       ```
 
 - Format and vet
@@ -80,9 +80,10 @@ Common commands
     ```
 
 High-level architecture
-- Entry point: main.go defines flags (-server, -key, -channel, -debug), constructs MCPBridge, and runs it.
-- MCPBridge struct holds serverURL, apiKey, channel, an http.Client, and debug flag.
-- Run loop:
+- Entry point: main.go defines flags (-server, -key, -channel, -debug) and creates a bridge instance.
+- Core logic: internal/bridge package contains MCPBridge struct and streaming logic.
+- MCPBridge struct holds ServerURL, APIKey, Channel, an http.Client, and Debug flag.
+- Run loop (in internal/bridge):
   - Reads from stdin via bufio.Reader into a 4KB buffer in a goroutine.
   - For each non-empty read, posts bytes to {serverURL}/api/v1/stream/{channel}.
   - Uses Authorization: Bearer {apiKey}, Content-Type: application/octet-stream.
@@ -91,11 +92,14 @@ High-level architecture
 
 Files of interest
 - go.mod — module name (mcp-bridge) and Go version.
-- main.go — entire implementation (stdin streaming and HTTP POST logic).
+- main.go — CLI entry point with flag parsing and bridge initialization.
+- internal/bridge/ — core bridge logic separated from CLI concerns.
 
 Extending the program
-- If functionality grows, consider moving logic into internal/ packages (e.g., internal/bridge) and keeping main.go focused on flag parsing and wiring.
-- Add _test.go files alongside new packages; prefer small, focused functions for easy unit testing.
+- Core logic lives in internal/bridge; add new functionality there.
+- Add unit tests alongside internal packages (e.g., internal/bridge/bridge_test.go).
+- BDD tests live in bdd/ and import internal/bridge.
+- Keep main.go focused on flag parsing and wiring; prefer small, focused functions for easy unit testing.
 
 House rules observed here
 - Keep solutions simple and clean; underengineer until needed.

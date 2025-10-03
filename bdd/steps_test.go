@@ -1,4 +1,4 @@
-package main
+package bdd
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/cucumber/godog"
+	"mcp-bridge/internal/bridge"
 )
 
 type capturedRequest struct {
@@ -20,7 +21,7 @@ type capturedRequest struct {
 
 type world struct {
 	server   *httptest.Server
-	bridge   *MCPBridge
+	bridge   *bridge.MCPBridge
 	mu       sync.Mutex
 	requests []capturedRequest
 }
@@ -43,7 +44,7 @@ func (w *world) aBridgeConfiguredForThatServerWithKeyAndChannel(key, channel str
 	if w.server == nil {
 		return fmt.Errorf("server not initialized")
 	}
-	w.bridge = NewMCPBridge(w.server.URL, key, channel, true)
+	w.bridge = bridge.New(w.server.URL, key, channel, true)
 	return nil
 }
 
@@ -51,7 +52,7 @@ func (w *world) iStreamTheMessage(msg string) error {
 	if w.bridge == nil {
 		return fmt.Errorf("bridge not initialized")
 	}
-	return w.bridge.streamToServer([]byte(msg))
+	return w.bridge.StreamToServer([]byte(msg))
 }
 
 func (w *world) theServerReceivedNRequestsToPath(n int, path string) error {
