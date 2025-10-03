@@ -29,7 +29,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *serverURL == "" || *apiKey == "" {
+	if *serverURL == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
