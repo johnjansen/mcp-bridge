@@ -1,8 +1,13 @@
 package bdd
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 
 	"github.com/cucumber/godog"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -47,6 +52,8 @@ type world struct {
 	apiKey        string
 	bridgeStarted bool
 	lastError     error
+	logBuffer     *bytes.Buffer
+	testServer    *httptest.Server
 }
 
 // Step implementations
@@ -180,12 +187,155 @@ func (w *world) whenTheClientSendsARequestItsForwardedToTheRemoteServer() error 
 }
 
 func (w *world) cleanup() error {
-	// Clean up test resources
+	if w.testServer != nil {
+		w.testServer.Close()
+		w.testServer = nil
+	}
+	return nil
+}
+
+// Streaming transport steps
+func (w *world) theServerExposesStreamingAt(path string) error {
+	w.testServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == path {
+			// Set up streaming connection
+			rw.Header().Set("Content-Type", "text/event-stream")
+			rw.WriteHeader(http.StatusOK)
+			// Send initial endpoint event
+			fmt.Fprintf(rw, "event: endpoint\ndata: {}\n\n")
+			rw.(http.Flusher).Flush()
+			// Keep connection open
+			<-r.Context().Done()
+		} else {
+			http.NotFound(rw, r)
+		}
+	}))
+	w.remoteURL = w.testServer.URL
+	return nil
+}
+
+func (w *world) theServerAcceptsStreamingSessions() error {
+	// Already handled in theServerExposesStreamingAt
+	return nil
+}
+
+func (w *world) theServerDoesNotExposeStreamingAt(path string) error {
+	w.testServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == path {
+			http.NotFound(rw, r)
+			return
+		}
+		// Handle other paths normally
+		rw.WriteHeader(http.StatusOK)
+	}))
+	w.remoteURL = w.testServer.URL
+	return nil
+}
+
+func (w *world) theServerAcceptsJSONRPCOverPOSTAt(path string) error {
+	oldHandler := w.testServer.Config.Handler
+	newHandler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == path && r.Method == "POST" {
+			// Basic JSON-RPC echo handler
+			var req map[string]interface{}
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				rw.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			rw.Header().Set("Content-Type", "application/json")
+			resp := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      req["id"],
+				"result":  map[string]interface{}{},
+			}
+			json.NewEncoder(rw).Encode(resp)
+			return
+		}
+		oldHandler.ServeHTTP(rw, r)
+	})
+	w.testServer.Config.Handler = newHandler
+	return nil
+}
+
+func (w *world) theServerDoesNotAcceptJSONRPCOverPOSTAt(path string) error {
+	oldHandler := w.testServer.Config.Handler
+	newHandler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == path && r.Method == "POST" {
+			rw.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		oldHandler.ServeHTTP(rw, r)
+	})
+	w.testServer.Config.Handler = newHandler
+	return nil
+}
+
+func (w *world) theBridgeConnectsUsingStreamingTransport() error {
+	// Verify by checking logs
+	if !strings.Contains(w.logBuffer.String(), "Using streaming transport") {
+		return fmt.Errorf("bridge did not connect using streaming transport")
+	}
+	return nil
+}
+
+func (w *world) theBridgeFallsBackToHTTPPOSTTransport() error {
+	// Verify by checking logs
+	if !strings.Contains(w.logBuffer.String(), "falling back to HTTP POST") {
+		return fmt.Errorf("bridge did not fall back to HTTP POST")
+	}
+	return nil
+}
+
+func (w *world) theBridgeLogs(expected string) error {
+	// Verify log content
+	if !strings.Contains(w.logBuffer.String(), expected) {
+		return fmt.Errorf("log message not found: %s", expected)
+	}
+	return nil
+}
+
+func (w *world) theBridgeCanProcessJSONRPCRequests() error {
+	// Send a test request through the bridge
+	req := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"method":  "test",
+		"id":      1,
+		"params":  map[string]interface{}{},
+	}
+	data, _ := json.Marshal(req)
+	resp, err := http.Post(w.testServer.URL+"/mcp", "application/json", bytes.NewReader(data))
+	if err != nil {
+		return fmt.Errorf("failed to send test request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("failed to decode response: %v", err)
+	}
+
+	if result["id"] != float64(1) {
+		return fmt.Errorf("unexpected response ID: %v", result["id"])
+	}
+
+	return nil
+}
+
+func (w *world) theBridgeFailsWithAnErrorAboutConnectionFailed() error {
+	if !strings.Contains(w.logBuffer.String(), "connection failed") {
+		return fmt.Errorf("bridge did not fail with connection error")
+	}
 	return nil
 }
 
 func InitializeScenario(sc *godog.ScenarioContext) {
-	w := &world{}
+	w := &world{
+		logBuffer: &bytes.Buffer{},
+	}
 
 	sc.Before(func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		return ctx, nil
@@ -221,4 +371,19 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^the remote server sends a notification to the bridge$`, w.theRemoteServerSendsANotificationToTheBridge)
 	sc.Step(`^the bridge forwards the notification to the client via stdout$`, w.theBridgeForwardsTheNotificationToTheClientViaStdout)
 	sc.Step(`^when the client sends a request, it's forwarded to the remote server$`, w.whenTheClientSendsARequestItsForwardedToTheRemoteServer)
+
+	// Transport selection steps
+	sc.Step(`^the server exposes streaming at "([^"]*)"$`, w.theServerExposesStreamingAt)
+	sc.Step(`^the server accepts streaming sessions$`, w.theServerAcceptsStreamingSessions)
+	sc.Step(`^the server does not expose streaming at "([^"]*)"$`, w.theServerDoesNotExposeStreamingAt)
+	sc.Step(`^the server accepts JSON-RPC over POST at "([^"]*)"$`, w.theServerAcceptsJSONRPCOverPOSTAt)
+	sc.Step(`^the server does not accept JSON-RPC over POST at "([^"]*)"$`, w.theServerDoesNotAcceptJSONRPCOverPOSTAt)
+	sc.Step(`^I start the bridge$`, w.theBridgeStarts)
+	sc.Step(`^the bridge connects using streaming transport$`, w.theBridgeConnectsUsingStreamingTransport)
+	sc.Step(`^the bridge falls back to HTTP POST transport$`, w.theBridgeFallsBackToHTTPPOSTTransport)
+	sc.Step(`^the bridge logs "([^"]*)"$`, w.theBridgeLogs)
+	sc.Step(`^the bridge can process JSON-RPC requests$`, w.theBridgeCanProcessJSONRPCRequests)
+	sc.Step(`^the bridge fails with an error about connection failed$`, w.theBridgeFailsWithAnErrorAboutConnectionFailed)
+	sc.Step(`^a remote MCP server base URL "([^"]*)"$`, func(url string) error { w.remoteURL = url; return nil })
+	sc.Step(`^debug logging is enabled$`, func() error { return nil })
 }

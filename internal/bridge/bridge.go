@@ -7,9 +7,23 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+type addAuthTransport struct {
+	base   http.RoundTripper
+	apiKey string
+}
+
+func (t *addAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", t.apiKey))
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Transfer-Encoding", "chunked")
+	return t.base.RoundTrip(req)
+}
 
 // MCPBridge manages bidirectional communication between a local stdio MCP client
 // and a remote HTTP MCP server.
@@ -104,6 +118,30 @@ func (b *MCPBridge) LogMCPServer(desc string, msg interface{}) {
 	}
 }
 
+// tryStreamingTransport attempts to establish a streaming connection
+// Returns nil and the transport if successful, or error if streaming isn't supported
+func (b *MCPBridge) tryStreamingTransport(client *http.Client) (mcp.Transport, error) {
+	b.Log("Attempting streaming transport...")
+	streamingEndpoint := b.RemoteURL + "/stream"
+	transport := &mcp.StreamableClientTransport{
+		Endpoint:   streamingEndpoint,
+		HTTPClient: client,
+	}
+
+	// Test the connection
+	remoteSession, err := b.client.Connect(b.ctx, transport, nil)
+	if err != nil {
+		return nil, err
+	}
+	remoteSession.Close()
+	return transport, nil
+}
+
+// setupHttpFallback creates an HTTP transport that uses regular POST requests
+func (b *MCPBridge) setupHttpFallback(client *http.Client) mcp.Transport {
+	return &mcp.StdioTransport{}
+}
+
 func (b *MCPBridge) Run() error {
 	b.Log("Starting MCP bridge to %s (debug: global=%v, client=%v, server=%v)",
 		b.RemoteURL, b.Debug, b.DebugClient, b.DebugServer)
@@ -118,12 +156,35 @@ func (b *MCPBridge) Run() error {
 	var transport mcp.Transport
 	switch remoteURL.Scheme {
 	case "http", "https":
-		// Use SSE transport for remote HTTP connection
+		// Create HTTP client with auth if needed
 		client := &http.Client{}
-		// Note: Authorization headers will need to be handled at the HTTP client level
-		transport = &mcp.SSEClientTransport{
-			Endpoint:   b.RemoteURL,
+		if b.APIKey != "" {
+			client.Transport = &addAuthTransport{base: http.DefaultTransport, apiKey: b.APIKey}
+		}
+
+		// Try streaming transport first
+		b.Log("Attempting streaming transport...")
+		streamingEndpoint := b.RemoteURL + "/stream"
+		streamTransport := &mcp.StreamableClientTransport{
+			Endpoint:   streamingEndpoint,
 			HTTPClient: client,
+		}
+
+		// Test streaming connection with timeout
+		testCtx, cancel := context.WithTimeout(b.ctx, 3*time.Second)
+		testSession, streamErr := b.client.Connect(testCtx, streamTransport, nil)
+		cancel()
+
+		if streamErr == nil {
+			testSession.Close()
+			b.Log("Using streaming transport")
+			transport = streamTransport
+		} else {
+			b.Log("Streaming not supported (%v), falling back to HTTP POST", streamErr)
+			// Fall back to HTTP POST transport
+			httpTransport := newHTTPPostTransport(b.RemoteURL, client, b.Debug)
+			// Run the HTTP POST bridge directly (it handles stdio itself)
+			return httpTransport.Run(b.ctx)
 		}
 	default:
 		return fmt.Errorf("unsupported URL scheme: %s", remoteURL.Scheme)
