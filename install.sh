@@ -11,19 +11,19 @@ NC='\033[0m' # No Color
 
 # Print colored output
 print_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
+    echo -e "${BLUE}ℹ️  $1${NC}" >&2
 }
 
 print_success() {
-    echo -e "${GREEN}✅ $1${NC}"
+    echo -e "${GREEN}✅ $1${NC}" >&2
 }
 
 print_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
+    echo -e "${YELLOW}⚠️  $1${NC}" >&2
 }
 
 print_error() {
-    echo -e "${RED}❌ $1${NC}"
+    echo -e "${RED}❌ $1${NC}" >&2
 }
 
 # Configuration
