@@ -24,12 +24,12 @@
 The easiest way to install `mcp-bridge` is using our automated installer that detects your platform and downloads the appropriate binary:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/johnjansen/mcp-bridge/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/johnjansen/mcp-bridge/master/install.sh | bash
 ```
 
 Or if you prefer to inspect the script first:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/johnjansen/mcp-bridge/main/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/johnjansen/mcp-bridge/master/install.sh -o install.sh
 chmod +x install.sh
 ./install.sh
 ```
