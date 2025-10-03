@@ -33,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Install script now properly detects and uses directories from user's PATH
+- Install script is OS-aware (macOS vs Linux) with platform-specific directory preferences
+- Install script correctly handles missing installation directories by creating them
+- Fixed extracted binary filename detection in install script
+
 ### Added
 - Initial release of mcp-bridge
 - Core MCP bridging functionality between stdio and bidirectional HTTP streaming

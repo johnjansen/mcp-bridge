@@ -28,7 +28,6 @@ print_error() {
 
 # Configuration
 REPO="johnjansen/mcp-bridge"
-INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="mcp-bridge"
 
 # Detect platform and architecture
@@ -66,6 +65,97 @@ detect_platform() {
     echo "${os}_${arch}"
 }
 
+# Detect best install directory from PATH
+detect_install_dir() {
+    local os="$(uname -s)"
+    local arch="$(uname -m)"
+    local candidate_dirs=()
+    
+    # OS-specific directory preferences
+    case "$os" in
+        Darwin*)
+            # macOS: prefer Homebrew locations, then system, then user
+            if [ "$arch" = "arm64" ]; then
+                # Apple Silicon
+                candidate_dirs=(
+                    "/opt/homebrew/bin"
+                    "/usr/local/bin"
+                    "$HOME/.local/bin"
+                    "$HOME/bin"
+                )
+            else
+                # Intel Mac
+                candidate_dirs=(
+                    "/usr/local/bin"
+                    "/opt/homebrew/bin"
+                    "$HOME/.local/bin"
+                    "$HOME/bin"
+                )
+            fi
+            ;;
+        Linux*)
+            # Linux: prefer user-local (no sudo needed), then system
+            candidate_dirs=(
+                "$HOME/.local/bin"
+                "$HOME/bin"
+                "/usr/local/bin"
+            )
+            ;;
+    esac
+    
+    # First, check if any candidate dir exists and is in PATH
+    for dir in "${candidate_dirs[@]}"; do
+        if [[ ":$PATH:" == *":$dir:"* ]]; then
+            if [ -d "$dir" ] && [ -w "$dir" ]; then
+                echo "$dir"
+                return 0
+            elif [ -d "$dir" ]; then
+                # Directory exists but not writable - may need sudo
+                echo "$dir"
+                return 0
+            fi
+        fi
+    done
+    
+    # If no existing dir found, create appropriate fallback
+    local fallback
+    case "$os" in
+        Darwin*)
+            # On macOS, try to create /usr/local/bin if possible (more standard)
+            fallback="/usr/local/bin"
+            if [ ! -d "$fallback" ]; then
+                print_info "Creating $fallback..."
+                sudo mkdir -p "$fallback"
+                sudo chown $(whoami):admin "$fallback" 2>/dev/null || true
+            fi
+            ;;
+        Linux*)
+            # On Linux, use ~/.local/bin (FreeDesktop standard)
+            fallback="$HOME/.local/bin"
+            if [ ! -d "$fallback" ]; then
+                print_info "Creating $fallback..."
+                mkdir -p "$fallback"
+            fi
+            ;;
+    esac
+    
+    # Check if it's in PATH
+    if [[ ":$PATH:" != *":$fallback:"* ]]; then
+        print_warning "$fallback is not in your PATH"
+        case "$os" in
+            Darwin*)
+                print_info "Add this line to your ~/.zshrc:"
+                ;;
+            Linux*)
+                print_info "Add this line to your ~/.bashrc or ~/.zshrc:"
+                ;;
+        esac
+        echo "    export PATH=\"$fallback:\$PATH\""
+    fi
+    
+    echo "$fallback"
+}
+
 # Get the latest release version
 get_latest_version() {
     local latest_url="https://api.github.com/repos/${REPO}/releases/latest"
@@ -94,6 +184,7 @@ get_latest_version() {
 install_binary() {
     local version="$1"
     local platform="$2"
+    local install_dir="$3"
     local tarball="${BINARY_NAME}-${version}-${platform}.tar.gz"
     local binary_name="${BINARY_NAME}-${platform}"
     local download_url="https://github.com/${REPO}/releases/download/${version}/${tarball}"
@@ -116,25 +207,35 @@ install_binary() {
     print_info "Extracting binary..."
     tar -xzf "$tarball"
     
-    # The extracted binary name includes the version
-    local extracted_binary="${BINARY_NAME}-${version}-${platform}"
+    # The extracted binary name is just binary-platform (no version)
+    local extracted_binary="${BINARY_NAME}-${platform}"
     
     # Install binary
-    print_info "Installing to ${INSTALL_DIR}/${BINARY_NAME}..."
+    print_info "Installing to ${install_dir}/${BINARY_NAME}..."
+    
+    # Create install directory if it doesn't exist
+    if [ ! -d "$install_dir" ]; then
+        print_info "Creating ${install_dir}..."
+        if [[ "$install_dir" == "$HOME"* ]]; then
+            mkdir -p "$install_dir"
+        else
+            sudo mkdir -p "$install_dir"
+        fi
+    fi
     
     # Check if we need sudo
-    if [ -w "$INSTALL_DIR" ]; then
-        mv "$extracted_binary" "${INSTALL_DIR}/${BINARY_NAME}"
+    if [ -w "$install_dir" ]; then
+        mv "$extracted_binary" "${install_dir}/${BINARY_NAME}"
     else
-        print_warning "Requesting sudo access to install to ${INSTALL_DIR}..."
-        sudo mv "$extracted_binary" "${INSTALL_DIR}/${BINARY_NAME}"
+        print_warning "Requesting sudo access to install to ${install_dir}..."
+        sudo mv "$extracted_binary" "${install_dir}/${BINARY_NAME}"
     fi
     
     # Make executable
-    if [ -w "${INSTALL_DIR}/${BINARY_NAME}" ]; then
-        chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
+    if [ -w "${install_dir}/${BINARY_NAME}" ]; then
+        chmod +x "${install_dir}/${BINARY_NAME}"
     else
-        sudo chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
+        sudo chmod +x "${install_dir}/${BINARY_NAME}"
     fi
     
     # Cleanup
@@ -182,13 +283,18 @@ main() {
     platform=$(detect_platform)
     print_info "Detected platform: $platform"
     
+    # Detect install directory
+    local install_dir
+    install_dir=$(detect_install_dir)
+    print_info "Install directory: $install_dir"
+    
     # Get latest version
     local version
     version=$(get_latest_version)
     print_info "Latest version: $version"
     
     # Install binary
-    install_binary "$version" "$platform"
+    install_binary "$version" "$platform" "$install_dir"
     
     # Verify installation
     verify_installation
