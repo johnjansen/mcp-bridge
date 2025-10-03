@@ -6,21 +6,39 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cucumber/godog"
 	"mcp-bridge/internal/bridge"
 )
 
+type safeBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (s *safeBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *safeBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.String()
+}
+
 type debugWorld struct {
 	remoteURL string
 	apiKey    string
 	bridge    *bridge.MCPBridge
-	logBuffer *bytes.Buffer // Capture log output
+	logBuffer *safeBuffer // Thread-safe buffer for concurrent log writes
 }
 
 func (w *debugWorld) reset() {
-	w.logBuffer = new(bytes.Buffer)
+	w.logBuffer = &safeBuffer{}
 	log.SetOutput(w.logBuffer) // Redirect log output to our buffer
 }
 
