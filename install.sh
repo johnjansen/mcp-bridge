@@ -94,8 +94,8 @@ get_latest_version() {
 install_binary() {
     local version="$1"
     local platform="$2"
+    local tarball="${BINARY_NAME}-${version}-${platform}.tar.gz"
     local binary_name="${BINARY_NAME}-${platform}"
-    local tarball="${binary_name}.tar.gz"
     local download_url="https://github.com/${REPO}/releases/download/${version}/${tarball}"
     local temp_dir=$(mktemp -d)
     
@@ -116,15 +116,18 @@ install_binary() {
     print_info "Extracting binary..."
     tar -xzf "$tarball"
     
+    # The extracted binary name includes the version
+    local extracted_binary="${BINARY_NAME}-${version}-${platform}"
+    
     # Install binary
     print_info "Installing to ${INSTALL_DIR}/${BINARY_NAME}..."
     
     # Check if we need sudo
     if [ -w "$INSTALL_DIR" ]; then
-        mv "$binary_name" "${INSTALL_DIR}/${BINARY_NAME}"
+        mv "$extracted_binary" "${INSTALL_DIR}/${BINARY_NAME}"
     else
         print_warning "Requesting sudo access to install to ${INSTALL_DIR}..."
-        sudo mv "$binary_name" "${INSTALL_DIR}/${BINARY_NAME}"
+        sudo mv "$extracted_binary" "${INSTALL_DIR}/${BINARY_NAME}"
     fi
     
     # Make executable
