@@ -13,9 +13,24 @@
 
 ## Installation
 
-### Download Pre-built Binaries
+### Automated Installer (Recommended)
 
-Download the latest release for your platform:
+The easiest way to install `mcp-bridge` is using our automated installer that detects your platform and downloads the appropriate binary:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/johnjansen/mcp-bridge/main/install.sh | bash
+```
+
+Or if you prefer to inspect the script first:
+```bash
+curl -fsSL https://raw.githubusercontent.com/johnjansen/mcp-bridge/main/install.sh -o install.sh
+chmod +x install.sh
+./install.sh
+```
+
+### Manual Installation from Releases
+
+Download the latest release for your platform from the [releases page](https://github.com/johnjansen/mcp-bridge/releases):
 
 ```bash
 # Linux AMD64
@@ -53,7 +68,7 @@ Connect to a remote MCP server in three simple steps:
 export MCP_API_KEY="your-secret-api-key"
 
 # 2. Start the bridge
-./bin/mcp-bridge \
+mcp-bridge \
   -server "https://your-remote-mcp-server.com" \
   -key "$MCP_API_KEY" \
   -debug
@@ -66,7 +81,7 @@ export MCP_API_KEY="your-secret-api-key"
 ### Connect Local AI Tools to Remote MCP Servers
 ```bash
 # Bridge enables local tools to access remote MCP capabilities
-my-local-mcp-client | ./bin/mcp-bridge -server "https://remote-mcp.com" -key "$API_KEY"
+my-local-mcp-client | mcp-bridge -server "https://remote-mcp.com" -key "$API_KEY"
 ```
 
 ### Access Remote Tools and Resources
@@ -79,7 +94,7 @@ The bridge transparently proxies:
 ### Development and Testing
 ```bash
 # Connect to local development MCP server
-./bin/mcp-bridge -server "http://localhost:3000" -key "dev-key" -debug
+mcp-bridge -server "http://localhost:3000" -key "dev-key" -debug
 ```
 
 ## Command Line Options
