@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Updated transport documentation to accurately reflect MCP protocol implementation
+- Clarified transport terminology to consistently use bidirectional HTTP streaming when referring to the transport layer
 
 [0.1.0]: https://github.com/johnjansen/mcp-bridge/releases/tag/v0.1.0
 
@@ -34,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Initial release of mcp-bridge
-- Core MCP bridging functionality between stdio and HTTP/SSE
+- Core MCP bridging functionality between stdio and bidirectional HTTP streaming
 - Command-line flags for server URL, API key, and debug mode
 - Official MCP Go SDK integration
 - BDD testing framework with godog

@@ -15,7 +15,7 @@
 >
 > Plus traditional bridging: `stdio ↔ [stdio ↔ http] ↔ http`
 >
-> Even if your tools support HTTP/SSE directly, mcp-bridge adds observability without changing your workflow.
+> Even if your tools support HTTP streaming directly, mcp-bridge adds observability without changing your workflow.
 
 ## Installation
 
@@ -122,7 +122,7 @@ MCP Bridge can be configured in various IDEs to enable local AI capabilities:
 ```
 
 ### Cursor/VSCode
-Cursor and VSCode support HTTP/SSE MCP servers directly, so you typically don't need mcp-bridge. Configure them directly:
+Cursor and VSCode support HTTP streaming for MCP directly, so you typically don't need mcp-bridge. Configure them directly:
 ```json
 {
   "mcpServers": {
@@ -169,7 +169,7 @@ mcp-bridge -server "http://localhost:3000" -key "dev-key" -debug
 
 ### Debug Logging
 
-MCP Bridge provides granular debug logging to help troubleshoot communication issues and observe MCP traffic in real time. This makes it a powerful companion even when your IDE can already speak to HTTP/SSE MCP servers directly.
+MCP Bridge provides granular debug logging to help troubleshoot communication issues and observe MCP traffic in real time. This makes it a powerful companion even when your IDE can already use HTTP streaming for MCP directly.
 
 ```bash
 # Full debug logging (both client and server)
@@ -258,7 +258,7 @@ MCP Bridge supports two transport mechanisms for communicating with remote serve
 **Transport Selection Process:**
 1. Bridge attempts streaming connection to `/stream` endpoint
 2. Uses 3-second timeout to test streaming capability
-3. If streaming succeeds, establishes SSE transport
+3. If streaming succeeds, establishes bidirectional HTTP streaming transport
 4. If streaming fails or times out, falls back to HTTP POST
 5. Logs transport selection when debug enabled
 
@@ -292,7 +292,7 @@ mcp-bridge -server "https://mcp.example.com" -key "$API_KEY" -debug
 Ensure `/stream` endpoint is available:
 ```bash
 mcp-bridge -server "https://streaming.example.com" -key "$API_KEY" -debug
-# Bridge will use SSE transport exclusively
+# Bridge will use HTTP streaming transport exclusively
 ```
 
 **3. Legacy Server (HTTP POST only):**

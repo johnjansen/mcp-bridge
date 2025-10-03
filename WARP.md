@@ -84,7 +84,7 @@ High-level architecture
 - MCPBridge struct holds RemoteURL, APIKey, MCP server, MCP client, and Debug flag.
 - Run loop (in internal/bridge):
   - Creates an MCP server that accepts stdio connections (left side of bridge).
-  - Creates an MCP client that connects to remote HTTP server via SSE transport (right side).
+  - Creates an MCP client that connects to remote server via bidirectional HTTP streaming transport (right side).
   - Proxies all MCP protocol communication bidirectionally between stdio and HTTP.
   - Uses the official MCP Go SDK for protocol handling.
 - Logging is gated behind -debug to avoid noisy output.
@@ -171,4 +171,4 @@ IDE Configuration
     }
   }
   ```
-  Note: For Cursor/VSCode, you likely don't need mcp-bridge since these editors support HTTP/SSE MCP servers directly.
+  Note: For Cursor/VSCode, you likely don't need mcp-bridge since these editors support HTTP streaming for MCP directly.
