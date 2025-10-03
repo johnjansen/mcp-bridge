@@ -76,6 +76,60 @@ mcp-bridge \
 # 3. Your local MCP client can now communicate via stdio
 ```
 
+## IDE Configuration
+
+MCP Bridge can be configured in various IDEs to enable local AI capabilities:
+
+### Warp.dev
+```json
+{
+  "your-mcp-server": {
+    "command": "mcp-bridge",
+    "args": [
+      "-server", "https://your-remote-mcp-server.com",
+      "-key", "$MCP_API_KEY",
+      "-debug"
+    ],
+    "env": {
+      "MCP_API_KEY": "your-secret-api-key"
+    },
+    "working_directory": null
+  }
+}
+```
+
+### Zed.dev
+```json
+{
+  "your-mcp-server": {
+    "command": "mcp-bridge",
+    "args": [
+      "-server", "https://your-remote-mcp-server.com",
+      "-key", "$MCP_API_KEY",
+      "-debug"
+    ],
+    "env": {
+      "MCP_API_KEY": "your-secret-api-key"
+    }
+  }
+}
+```
+
+### Cursor/VSCode
+Cursor and VSCode support HTTP/SSE MCP servers directly, so you typically don't need mcp-bridge. Configure them directly:
+```json
+{
+  "mcpServers": {
+    "your-mcp-server": {
+      "url": "https://your-remote-mcp-server.com/mcp",
+      "headers": {
+        "Authorization": "Bearer your-secret-api-key"
+      }
+    }
+  }
+}
+```
+
 ## Use Cases
 
 ### Connect Local AI Tools to Remote MCP Servers

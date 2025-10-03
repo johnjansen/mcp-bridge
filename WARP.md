@@ -111,3 +111,56 @@ Pre-commit hooks
   - Runs gitleaks, go vet, go fmt, BDD tests, and build verification
   - Prevents commits that fail any checks
 - All contributors should install the hooks after cloning
+
+IDE Configuration
+- Configure MCP Bridge in your IDE to connect to remote MCP servers:
+
+  Warp.dev:
+  ```json
+  {
+    "your-mcp-server": {
+      "command": "mcp-bridge",
+      "args": [
+        "-server", "https://your-remote-mcp-server.com",
+        "-key", "$MCP_API_KEY",
+        "-debug"
+      ],
+      "env": {
+        "MCP_API_KEY": "your-secret-api-key"
+      },
+      "working_directory": null
+    }
+  }
+  ```
+
+  Zed.dev:
+  ```json
+  {
+    "your-mcp-server": {
+      "command": "mcp-bridge",
+      "args": [
+        "-server", "https://your-remote-mcp-server.com",
+        "-key", "$MCP_API_KEY",
+        "-debug"
+      ],
+      "env": {
+        "MCP_API_KEY": "your-secret-api-key"
+      }
+    }
+  }
+  ```
+
+  Cursor/VSCode:
+  ```json
+  {
+    "mcpServers": {
+      "your-mcp-server": {
+        "url": "https://your-remote-mcp-server.com/mcp",
+        "headers": {
+          "Authorization": "Bearer your-secret-api-key"
+        }
+      }
+    }
+  }
+  ```
+  Note: For Cursor/VSCode, you likely don't need mcp-bridge since these editors support HTTP/SSE MCP servers directly.
