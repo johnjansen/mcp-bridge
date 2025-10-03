@@ -8,8 +8,11 @@ import (
 
 func TestFeatures(t *testing.T) {
 	suite := godog.TestSuite{
-		Name:                "mcp-bridge-bdd",
-		ScenarioInitializer: InitializeScenario,
+		Name: "mcp-bridge-bdd",
+		ScenarioInitializer: func(ctx *godog.ScenarioContext) {
+			InitializeScenario(ctx)
+			InitializeDebugScenario(ctx)
+		},
 		Options: &godog.Options{
 			Format:    "pretty",
 			Paths:     []string{"../features"},

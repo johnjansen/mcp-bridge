@@ -157,7 +157,41 @@ mcp-bridge -server "http://localhost:3000" -key "dev-key" -debug
 |------|-------------|----------|
 | `-server` | Remote MCP server URL (HTTP/HTTPS) | Yes |
 | `-key` | API key for authentication | Yes |
-| `-debug` | Enable debug logging | No |
+| `-debug` | Enable all debug logging | No |
+| `-debug-client` | Enable client-side message logging | No |
+| `-debug-server` | Enable server-side message logging | No |
+
+### Debug Logging
+
+MCP Bridge provides granular debug logging to help troubleshoot communication issues:
+
+```bash
+# Full debug logging (both client and server)
+mcp-bridge -server "https://example.com/mcp" -key "$API_KEY" -debug
+
+# Client-side only (→ indicator for client messages)
+mcp-bridge -server "https://example.com/mcp" -key "$API_KEY" -debug-client
+
+# Server-side only (← indicator for server messages)
+mcp-bridge -server "https://example.com/mcp" -key "$API_KEY" -debug-server
+```
+
+Example debug output:
+```
+2025/10/03 17:40:43 Starting MCP bridge to https://example.com/mcp (debug: global=true, client=true, server=true)
+→ Initialize request from client:
+{
+  "version": "1.0.0",
+  "protocol": "mcp"
+}
+→ Forwarding to remote server
+← Response from remote server:
+{
+  "ok": true,
+  "version": "1.0.0"
+}
+← Forwarding to client
+```
 
 ## How It Works
 

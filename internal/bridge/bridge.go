@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,13 +11,17 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// MCPBridge manages bidirectional communication between a local stdio MCP client
+// and a remote HTTP MCP server.
 type MCPBridge struct {
-	RemoteURL string
-	APIKey    string
-	Debug     bool
-	server    *mcp.Server
-	client    *mcp.Client
-	ctx       context.Context
+	RemoteURL   string
+	APIKey      string
+	Debug       bool // Global debug flag (enables all debugging)
+	DebugClient bool // Enable client-side message logging
+	DebugServer bool // Enable server-side message logging
+	server      *mcp.Server
+	client      *mcp.Client
+	ctx         context.Context
 }
 
 func New(remoteURL, apiKey string, debug bool) *MCPBridge {
@@ -44,14 +49,64 @@ func New(remoteURL, apiKey string, debug bool) *MCPBridge {
 	}
 }
 
+// SetDebugFlags configures granular debug logging flags
+func (b *MCPBridge) SetDebugFlags(debugClient, debugServer bool) {
+	b.DebugClient = b.Debug || debugClient
+	b.DebugServer = b.Debug || debugServer
+}
+
+// LogClient logs client-side messages with → indicator
+func (b *MCPBridge) LogClient(format string, v ...interface{}) {
+	if b.Debug || b.DebugClient {
+		log.Printf("→ "+format, v...)
+	}
+}
+
+// LogServer logs server-side messages with ← indicator
+func (b *MCPBridge) LogServer(format string, v ...interface{}) {
+	if b.Debug || b.DebugServer {
+		log.Printf("← "+format, v...)
+	}
+}
+
+// Log logs general messages (not specific to client/server)
 func (b *MCPBridge) Log(format string, v ...interface{}) {
-	if b.Debug {
+	if b.Debug || b.DebugClient || b.DebugServer {
 		log.Printf(format, v...)
 	}
 }
 
+// formatMCPMessage formats an MCP protocol message for logging
+func (b *MCPBridge) formatMCPMessage(msg interface{}) string {
+	if msg == nil {
+		return "<nil>"
+	}
+
+	// Try to marshal the message to JSON for readability
+	json, err := json.MarshalIndent(msg, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("%+v", msg)
+	}
+	return string(json)
+}
+
+// LogMCPClient logs client-side MCP protocol messages
+func (b *MCPBridge) LogMCPClient(desc string, msg interface{}) {
+	if b.Debug || b.DebugClient {
+		log.Printf("→ %s:\n%s", desc, b.formatMCPMessage(msg))
+	}
+}
+
+// LogMCPServer logs server-side MCP protocol messages
+func (b *MCPBridge) LogMCPServer(desc string, msg interface{}) {
+	if b.Debug || b.DebugServer {
+		log.Printf("← %s:\n%s", desc, b.formatMCPMessage(msg))
+	}
+}
+
 func (b *MCPBridge) Run() error {
-	b.Log("Starting MCP bridge to %s", b.RemoteURL)
+	b.Log("Starting MCP bridge to %s (debug: global=%v, client=%v, server=%v)",
+		b.RemoteURL, b.Debug, b.DebugClient, b.DebugServer)
 
 	// Parse remote URL to determine transport type
 	remoteURL, err := url.Parse(b.RemoteURL)
