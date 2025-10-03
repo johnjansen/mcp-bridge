@@ -13,7 +13,30 @@
 
 ## Installation
 
-Build from source:
+### Download Pre-built Binaries
+
+Download the latest release for your platform:
+
+```bash
+# Linux AMD64
+curl -L -o mcp-bridge.tar.gz https://github.com/johnjansen/mcp-bridge/releases/latest/download/mcp-bridge-latest-linux_amd64.tar.gz
+
+# Linux ARM64
+curl -L -o mcp-bridge.tar.gz https://github.com/johnjansen/mcp-bridge/releases/latest/download/mcp-bridge-latest-linux_arm64.tar.gz
+
+# macOS Intel
+curl -L -o mcp-bridge.tar.gz https://github.com/johnjansen/mcp-bridge/releases/latest/download/mcp-bridge-latest-darwin_amd64.tar.gz
+
+# macOS Apple Silicon
+curl -L -o mcp-bridge.tar.gz https://github.com/johnjansen/mcp-bridge/releases/latest/download/mcp-bridge-latest-darwin_arm64.tar.gz
+
+# Extract and install
+tar -xzf mcp-bridge.tar.gz
+sudo mv mcp-bridge-* /usr/local/bin/mcp-bridge
+chmod +x /usr/local/bin/mcp-bridge
+```
+
+### Build from Source
 
 ```bash
 git clone https://github.com/johnjansen/mcp-bridge.git

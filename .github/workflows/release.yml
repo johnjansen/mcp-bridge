@@ -1,0 +1,133 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
+        default: 'v0.1.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: linux_amd64
+          - goos: linux
+            goarch: arm64
+            suffix: linux_arm64
+          - goos: darwin
+            goarch: amd64
+            suffix: darwin_amd64
+          - goos: darwin
+            goarch: arm64
+            suffix: darwin_arm64
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.23
+        
+    - name: Get version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "version=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Build binary
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+        CGO_ENABLED: 0
+      run: |
+        mkdir -p dist
+        go build -v -ldflags="-s -w -X main.version=${{ steps.version.outputs.version }}" -o dist/mcp-bridge-${{ matrix.suffix }} .
+        
+    - name: Create tarball
+      run: |
+        cd dist
+        tar -czf mcp-bridge-${{ steps.version.outputs.version }}-${{ matrix.suffix }}.tar.gz mcp-bridge-${{ matrix.suffix }}
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: mcp-bridge-${{ matrix.suffix }}
+        path: dist/mcp-bridge-${{ steps.version.outputs.version }}-${{ matrix.suffix }}.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Get version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "version=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: dist
+        
+    - name: Generate changelog
+      id: changelog
+      run: |
+        echo "## What's Changed" > CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "Cross-platform builds for mcp-bridge ${{ steps.version.outputs.version }}" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "### Downloads" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "- **Linux AMD64**: \`mcp-bridge-${{ steps.version.outputs.version }}-linux_amd64.tar.gz\`" >> CHANGELOG.md
+        echo "- **Linux ARM64**: \`mcp-bridge-${{ steps.version.outputs.version }}-linux_arm64.tar.gz\`" >> CHANGELOG.md
+        echo "- **macOS Intel**: \`mcp-bridge-${{ steps.version.outputs.version }}-darwin_amd64.tar.gz\`" >> CHANGELOG.md
+        echo "- **macOS Apple Silicon**: \`mcp-bridge-${{ steps.version.outputs.version }}-darwin_arm64.tar.gz\`" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "### Installation" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "\`\`\`bash" >> CHANGELOG.md
+        echo "# Download for your platform" >> CHANGELOG.md
+        echo "curl -L -o mcp-bridge.tar.gz https://github.com/johnjansen/mcp-bridge/releases/download/${{ steps.version.outputs.version }}/mcp-bridge-${{ steps.version.outputs.version }}-linux_amd64.tar.gz" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "# Extract and install" >> CHANGELOG.md
+        echo "tar -xzf mcp-bridge.tar.gz" >> CHANGELOG.md
+        echo "sudo mv mcp-bridge-linux_amd64 /usr/local/bin/mcp-bridge" >> CHANGELOG.md
+        echo "chmod +x /usr/local/bin/mcp-bridge" >> CHANGELOG.md
+        echo "\`\`\`" >> CHANGELOG.md
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        name: ${{ steps.version.outputs.version }}
+        body_path: CHANGELOG.md
+        files: |
+          dist/*/mcp-bridge-${{ steps.version.outputs.version }}-linux_amd64.tar.gz
+          dist/*/mcp-bridge-${{ steps.version.outputs.version }}-linux_arm64.tar.gz
+          dist/*/mcp-bridge-${{ steps.version.outputs.version }}-darwin_amd64.tar.gz
+          dist/*/mcp-bridge-${{ steps.version.outputs.version }}-darwin_arm64.tar.gz
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
