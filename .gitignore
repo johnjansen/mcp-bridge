@@ -1,0 +1,40 @@
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries (go test -c)
+*.test
+
+# Coverage outputs
+*.out
+coverage.*
+
+# Build output directories
+/bin/
+/build/
+/dist/
+
+# Deprecated dependency directory (not used with Go modules, but ignore if present)
+/vendor/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editors/IDE
+.vscode/
+.idea/
+*.iml
+
+# Env files (do not commit secrets)
+.env
+.env.*
