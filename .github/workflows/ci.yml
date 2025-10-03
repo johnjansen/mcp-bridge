@@ -12,7 +12,7 @@ jobs:
     
     strategy:
       matrix:
-        go-version: [1.21, 1.22, 1.23]
+        go-version: [1.22, 1.23]
     
     steps:
     - name: Checkout code
@@ -80,10 +80,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Run Gosec Security Scanner
-      uses: securecodewarrior/github-action-gosec@master
+    - name: Set up Go
+      uses: actions/setup-go@v4
       with:
-        args: './...'
+        go-version: 1.23
+        
+    - name: Install gosec
+      run: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+      
+    - name: Run Gosec Security Scanner
+      run: gosec ./...
         
     - name: Install gitleaks
       run: |
