@@ -40,7 +40,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.23
+        go-version-file: 'go.mod'
         
     - name: Get version
       id: version
@@ -126,10 +126,10 @@ jobs:
         name: ${{ steps.version.outputs.version }}
         body_path: CHANGELOG.md
         files: |
-          dist/*/mcp-bridge-${{ steps.version.outputs.version }}-linux_amd64.tar.gz
-          dist/*/mcp-bridge-${{ steps.version.outputs.version }}-linux_arm64.tar.gz
-          dist/*/mcp-bridge-${{ steps.version.outputs.version }}-darwin_amd64.tar.gz
-          dist/*/mcp-bridge-${{ steps.version.outputs.version }}-darwin_arm64.tar.gz
+          dist/mcp-bridge-linux_amd64/mcp-bridge-${{ steps.version.outputs.version }}-linux_amd64.tar.gz
+          dist/mcp-bridge-linux_arm64/mcp-bridge-${{ steps.version.outputs.version }}-linux_arm64.tar.gz
+          dist/mcp-bridge-darwin_amd64/mcp-bridge-${{ steps.version.outputs.version }}-darwin_amd64.tar.gz
+          dist/mcp-bridge-darwin_arm64/mcp-bridge-${{ steps.version.outputs.version }}-darwin_arm64.tar.gz
         draft: false
         prerelease: false
       env:
